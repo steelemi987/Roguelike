@@ -1,11 +1,11 @@
 package model.render;
 
 import static model.Support.*;
-import model.Character;
-import model.Coordinate;
-import model.GameSession;
+import model.character.Character;
+import model.level.Coordinate;
 import model.enemies.Enemy;
 import model.enemies.Ghost;
+import model.items.Item;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,26 +13,36 @@ import java.util.Set;
 
 
 public class RenderForView {
-    private char[][] fieldForView;
-    private char[][] fieldMap;
-//    private char[][] fieldStaticScene;
-    private Set<Coordinate> dynamicVision;
+    private final char[][] fieldForView;
+    /// поле из GameSession
+    private final char[][] fieldMap;
+    private final Set<Coordinate> dynamicVision;
     private Set<Coordinate> staticVision;
     private Character character;
     private ArrayList<Enemy> enemies;
-//    private ArrayList<Item> items;
+    private ArrayList<Item> items;
     private Coordinate exit;
-    private final static int RADIUS_VISION = 5; /// НЕ МЕНЯТЬ!!!!
+    private final static int RADIUS_VISION = 5;
 
+    /**
+     * Конструктор
+     * @param fieldMap карта с объектами
+     */
     public RenderForView(char[][] fieldMap) {
-//        fieldStaticScene = new char[LEVEL_HEIGHT][LEVEL_WIDTH];
         fieldForView = new char[LEVEL_HEIGHT][LEVEL_WIDTH];
         this.fieldMap = fieldMap;
         dynamicVision = new HashSet<>();
         staticVision = new HashSet<>();
     }
 
-    public void renderField(GameSession game) {
+    /**
+     * Переносит информацию из модели в формат поле символов, для дальнейшей распечатки на экран консоли.
+     * Работа рендера разделена на 2 сцены: динамическая и статическая. Динамическая отражает объекты, которые могут
+     * менять свои координаты или же исчезать с карты. Статическая - неизменяемые объекты. Сцены представлены в виде
+     * соответствущих сетов координат.
+     * Создаем сцены. Переносим в матрицу для представления
+     */
+    private void renderField() {
         clearField(fieldForView);
         if (!dynamicVision.isEmpty()) {
             dynamicVision.clear();
@@ -40,13 +50,16 @@ public class RenderForView {
         createVisions();
         renderDynamic();
         renderStatic();
-//        renderStaticScene(game);
-//        clearField(fieldForView);
-//        renderFieldForView(game);
         fieldForView[character.getPosition().getY()][character.getPosition().getX()] = CHARACTER;
     }
 
-    public void createVisions() {
+    /**
+     * Создает динамическую и статическую сцены. Создается окружность в виде списка координат, отражающая границы поля
+     * зрения персонажа. От местоположения персонажа к каждой точке окружности пускается луч в виде списка координат.
+     * Далее объекты расположенные на этих координатах распределяются по спискам в зависимости от их типа. Если обзор
+     * блокируется. то распределение заканчивается.
+     */
+    private void createVisions() {
         ArrayList<Coordinate> coordinatesCircle = createRadiusOfVision();
         for (Coordinate point : coordinatesCircle) {
             ArrayList<Coordinate> linePoints = getLine(character.getPosition(), point);
@@ -60,37 +73,51 @@ public class RenderForView {
                     dynamicVision.add(c);
                 }
             }
-//            dynamicVision.addAll(linePoints);
         }
-//        for(Coordinate c : dynamicVision){
-//
-//            fieldForView[c.getY()][c.getX()] = fieldMap[c.getY()][c.getX()];
-//        }
-//        fieldForView[character.getPosition().getY()][character.getPosition().getX()] = CHARACTER;
     }
 
-    public boolean isStaticObj(Coordinate c) {
+    /**
+     * Проверяет - является ли объект расположенный по заданным координатам статическим.
+     * @param c координаты объекта
+     * @return true - статический объект, false - динамический
+     */
+    private boolean isStaticObj(Coordinate c) {
         char obj = fieldMap[c.getY()][c.getX()];
         return obj == WALL || obj == CORRIDOR || obj == DOOR || obj == ' ';
     }
-    public boolean isBlockVision(Coordinate c) {
+
+    /**
+     * Проверяет - блокирует ли объект расположенный по заданным координатам обзор персонажа.
+     * @param c координаты объекта
+     * @return true - объект блокирует обзор, false - нет.
+     */
+    private boolean isBlockVision(Coordinate c) {
         char obj = fieldMap[c.getY()][c.getX()];
         return obj == WALL || obj == ' ';
     }
 
 
-    public void renderStatic() {
+    /**
+     * Переносит статические объекты на матрицу для представления.
+     */
+    private void renderStatic() {
         for(Coordinate c : staticVision) {
             fieldForView[c.getY()][c.getX()] = fieldMap[c.getY()][c.getX()];
         }
     }
-    public void renderDynamic() {
+
+    /**
+     * Переносит динамические объекты на матрицу для представления.
+     */
+    private void renderDynamic() {
         for(Coordinate c : dynamicVision) {
             fieldForView[c.getY()][c.getX()] = FLOOR;
         }
-//        for(Item i : game.getItemList()){
-//            fieldForView[i.getPosition().getY()][i.getPosition().getX()] = ITEM;
-//        }
+        for(Item i : items){
+            if (dynamicVision.contains(i.getPosition())) {
+                fieldForView[i.getPosition().getY()][i.getPosition().getX()] = ITEM;
+            }
+        }
         for(Enemy e : enemies) {
             if (dynamicVision.contains(e.getPosition())) {
                 if((e instanceof Ghost g && g.isVisible()) || !(e instanceof Ghost)) {
@@ -103,15 +130,16 @@ public class RenderForView {
         }
     }
 
-
-    public ArrayList<Coordinate> createRadiusOfVision() {
+    /**
+     * Создает границы обзора персонажа в виде окружности по алгоритму Брезенхема.
+     * @return массив координат созданной окружности
+     */
+    private ArrayList<Coordinate> createRadiusOfVision() {
         ArrayList<Coordinate> coordinatesCircle = new ArrayList<>();
         int x = 0;
         int y = RADIUS_VISION;
         int d = 3 - 2 * RADIUS_VISION;
-
         while (x <= y) {
-            // Добавляем точки в все 8 октантов
             addSymmetricPoints(coordinatesCircle, character.getPosition().getX(), character.getPosition().getY(), x, y);
             if (d <= 0) {
                 d = d + 4 * x + 6;
@@ -121,13 +149,11 @@ public class RenderForView {
             }
             x++;
         }
-
         addDopPoints(coordinatesCircle, character.getPosition().getX(), character.getPosition().getY());
         return coordinatesCircle;
     }
 
     private static void addSymmetricPoints(ArrayList<Coordinate> coordinatesCircle, int cx, int cy, int x, int y) {
-        // Все 8 симметричных точек
         coordinatesCircle.add(new Coordinate(cx + x, cy + y));
         coordinatesCircle.add(new Coordinate(cx - x, cy + y));
         coordinatesCircle.add(new Coordinate(cx + x, cy - y));
@@ -152,7 +178,7 @@ public class RenderForView {
      * @param end конечная точка
      * @return список координат точки линии, остановленный при отрицательных x или y
      */
-    public ArrayList<Coordinate> getLine(Coordinate start, Coordinate end) {
+    private ArrayList<Coordinate> getLine(Coordinate start, Coordinate end) {
         ArrayList<Coordinate> linePoints = new ArrayList<>();
 
         int x0 = start.getX();
@@ -168,7 +194,6 @@ public class RenderForView {
 
         int err = dx - dy;
         while (true) {
-            // Если текущая точка с отрицательными координатами — завершаем цикл
             if (x0 < 0 || y0 < 0) {
                 break;
             }
@@ -192,14 +217,18 @@ public class RenderForView {
         return linePoints;
     }
 
+    /**
+     * Очищает статическую сцену перед новым уровнем
+     */
     public void clearFieldsForNewLevel() {
         staticVision.clear();
-//        radiusVision.clear();
-//        clearField(fieldForView);
-//        clearField(fieldStaticScene);
     }
 
-    public void clearField(char[][] field) {
+    /**
+     * Очистка матрицы
+     * @param field матрица
+     */
+    private void clearField(char[][] field) {
         for (int i = 0; i < LEVEL_HEIGHT; i++) {
             for (int j = 0; j < LEVEL_WIDTH; j++) {
                 field[i][j] = ' ';
@@ -207,9 +236,17 @@ public class RenderForView {
         }
     }
 
-    public char[][] getField(GameSession game) {
-        renderField(game);
+    /**
+     * Передает готовую матрицу с видимыми объектами для представления и дальнейшего вывода в консоль
+     * @return матрицу
+     */
+    public char[][] getField() {
+        renderField();
         return fieldForView;
+    }
+
+    public Set<Coordinate> getStaticVision() {
+        return staticVision;
     }
 
     public void setCharacter(Character character) {
@@ -220,11 +257,15 @@ public class RenderForView {
         this.enemies = enemies;
     }
 
-//    public void setItems(ArrayList<Item> items) {
-//        this.items = items;
-//    }
+    public void setItems(ArrayList<Item> items) {
+        this.items = items;
+    }
 
     public void setExit(Coordinate exit) {
         this.exit = exit;
+    }
+
+    public void setStaticVision(Set<Coordinate> staticVision) {
+        this.staticVision = staticVision;
     }
 }

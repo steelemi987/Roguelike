@@ -1,23 +1,40 @@
 package model.enemies;
 
-import model.Character;
-import model.Coordinate;
-
+import model.character.Character;
+import model.level.Coordinate;
 import static model.Support.*;
 
 public class Ogre extends Enemy{
-    private boolean sleep; // отдыхает ли огр
-    private boolean counterattack; // возможность контраттаки
-    private final int steps; // количество ходов
+    /// отдыхает ли огр
+    private boolean sleep;
+    /// Возможность контратаки
+    private boolean counterattack;
+    /// Количество ходов
+    private final int steps;
+
     public Ogre(Coordinate position, int currentLevel) {
         super(position);
         this.steps = 2;
         this.sleep = false;
         this.counterattack = false;
         this.type = OGRE;
-        this.health = 25 + currentLevel;
+        this.maxHealth = 25 + currentLevel;
+        this.health = maxHealth;
         this.agility = 10 + currentLevel;
         this.strength = 4 + currentLevel;
+        this.hostility = 4;
+    }
+
+    public Ogre(Coordinate position, int maxHealth, int health, int agility, int strength, boolean sleep, boolean counterattack) {
+        super(position);
+        this.steps = 2;
+        this.sleep = sleep;
+        this.counterattack = counterattack;
+        this.type = OGRE;
+        this.maxHealth = maxHealth;
+        this.health = health;
+        this.agility = agility;
+        this.strength = strength;
         this.hostility = 4;
     }
 
@@ -28,7 +45,7 @@ public class Ogre extends Enemy{
      * @param field поле со структурами
      */
     @Override
-    public void act(Character character, char[][] field) { // Огр ходит 2 раза подряд, но функция renderfield вызывается единожды, на поле(field) остается координата первого хода
+    public void act(Character character, char[][] field) {
         int i = 1;
         while (i <= steps && !sleep) {
             if (doISeeCharacter(character.getPosition())) {
@@ -52,16 +69,15 @@ public class Ogre extends Enemy{
     }
 
     /**
-     * Пробуждение огра, включается способность к контраттаке.
+     * Пробуждение огра, включается способность к контратаке.
      */
-    public void wakeUp() {
+    private void wakeUp() {
         sleep = false;
         counterattack = true;
-
     }
 
     /**
-     * Если огр может контраттаковать, возвращаем эффект контраттаки, если нет - отсутствие эффекта.
+     * Если огр может контратаковать, возвращаем эффект контратаки, если нет - отсутствие эффекта.
      * @return код эффекта
      */
     @Override
@@ -74,5 +90,13 @@ public class Ogre extends Enemy{
             effect = Effect.NO_EFFECT.ordinal();
         }
         return effect;
+    }
+
+    public boolean isSleep() {
+        return sleep;
+    }
+
+    public boolean isCounterattack() {
+        return counterattack;
     }
 }

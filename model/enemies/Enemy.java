@@ -1,14 +1,14 @@
 package model.enemies;
 
-import model.Character;
-import model.Coordinate;
-import model.GameSession;
-import model.Observable;
-import model.Observer;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
+import model.character.Character;
+import model.interfaces.Fighter;
+import model.level.Coordinate;
+import model.interfaces.Observable;
+import model.interfaces.Observer;
+import model.items.Item;
 import static model.Support.*;
 
 /**
@@ -18,15 +18,13 @@ import static model.Support.*;
 public class Enemy implements Fighter, Observable {
     protected Fight fightClub;
     protected int type = ENEMY;
-//    protected int maxHealth;
+    protected int maxHealth;
     protected int health;
     protected int agility;
     protected int strength;
     protected int hostility;
     protected Coordinate position;
     protected Observer observer;
-
-    protected GameSession game;
 
     /**
      * Конструктор.
@@ -63,7 +61,7 @@ public class Enemy implements Fighter, Observable {
      * @param characterPosition координата позиции персонажа
      * @return true - если персонаж находиться внутри "радиуса обзора", false - если нет.
      */
-    public boolean doISeeCharacter(Coordinate characterPosition) {
+    protected boolean doISeeCharacter(Coordinate characterPosition) {
         int minX = position.getX() - hostility;
         int maxX = position.getX() + hostility;
         int minY = position.getY() - hostility;
@@ -77,7 +75,7 @@ public class Enemy implements Fighter, Observable {
      * @param characterPosition координаты персонажа
      * @return true - если персонаж находиться в радиусе поражения атаки врага, false - если нет.
      */
-    public boolean canFight(Coordinate characterPosition) {
+    protected boolean canFight(Coordinate characterPosition) {
         ArrayList<Coordinate> hitRange = new ArrayList<>();
         hitRange.add(new Coordinate(position.getX(), position.getY() - 1));
         hitRange.add(new Coordinate(position.getX() + 1, position.getY()));
@@ -95,7 +93,7 @@ public class Enemy implements Fighter, Observable {
      * @param field поле со структурами
      * @return true - если персонаж достижим, false - если нет.
      */
-    public boolean canReachCharacter(Coordinate characterPosition, char[][] field) {
+    protected boolean canReachCharacter(Coordinate characterPosition, char[][] field) {
         int minY, minX, maxX, maxY;
         if (characterPosition.getY() < position.getY()) {
             minY = characterPosition.getY();
@@ -128,7 +126,7 @@ public class Enemy implements Fighter, Observable {
             res = false;
             for (int i = minY; i <= maxY; i++) {
                 for (int j = minX; j <= maxX; j++) {
-                    if (field[i][j] == FLOOR || field[i][j] == ITEM) { // Заменить на canMove()
+                    if (field[i][j] == FLOOR || field[i][j] == ITEM) {
                         res = true;
                         break;
                     }
@@ -153,7 +151,7 @@ public class Enemy implements Fighter, Observable {
      * @param characterPosition координаты персонажа
      * @param field поле со структурами
      */
-    public void pursueCharacter(Coordinate characterPosition, char[][] field) {
+    protected void pursueCharacter(Coordinate characterPosition, char[][] field) {
         ArrayList<Integer> directions = getDirectionList();
         LinkedHashMap<Coordinate, Integer> positions = directions.stream()
                 .map(this::getCoordinateWithShift)
@@ -176,7 +174,7 @@ public class Enemy implements Fighter, Observable {
      * данного.
      * @return возвращает этот массив.
      */
-    public ArrayList<Integer> getDirectionList() {
+    protected ArrayList<Integer> getDirectionList() {
         return new ArrayList<>(Arrays.asList(UP, RIGHT, DOWN, LEFT));
     }
 
@@ -186,7 +184,7 @@ public class Enemy implements Fighter, Observable {
      * @param field поле со структурами
      * @return true - если клетка свободна, false - если нет.
      */
-    public boolean canMove(Coordinate next, char[][] field) {
+    private boolean canMove(Coordinate next, char[][] field) {
         return field[next.getY()][next.getX()] == FLOOR || field[next.getY()][next.getX()] == ITEM;
     }
 
@@ -196,7 +194,7 @@ public class Enemy implements Fighter, Observable {
      * @param direction направление следующей точки
      * @return координаты сдвинутой точки.
      */
-    public Coordinate getCoordinateWithShift(int direction) { // Coordinate src,
+    protected Coordinate getCoordinateWithShift(int direction) {
         Coordinate next = new Coordinate();
         switch (direction) {
             case UP : next.setCoordinate(position.getX(), position.getY() - 1);
@@ -218,7 +216,7 @@ public class Enemy implements Fighter, Observable {
      * @param end конечая точка
      * @return количество шагов до конечной точки.
      */
-    public  int getCostMove(Coordinate begin, Coordinate end) {
+    private int getCostMove(Coordinate begin, Coordinate end) {
         int stepY = Math.abs(end.getY() - begin.getY());
         int stepX = Math.abs(end.getX() - begin.getX());
         return stepY + stepX;
@@ -233,14 +231,14 @@ public class Enemy implements Fighter, Observable {
      * Если массив не пустой, то выбираем случайное направоение и меняем координаты врага.
      * @param field поле со структурами
      */
-    public void moveInPattern(char[][] field) {
+    protected void moveInPattern(char[][] field) {
         ArrayList<Integer> directions = getDirectionList();
         ArrayList<Coordinate> positions = directions.stream()
                 .map(this::getCoordinateWithShift)
                 .filter(i -> canMove(i, field))
                 .collect(Collectors.toCollection(ArrayList::new));
         if(!positions.isEmpty()) {
-            int randDirection = randInDiaposone(0, positions.size() - 1);
+            int randDirection = randInDiapason(0, positions.size() - 1);
             setPosition(positions.get(randDirection));
         }
     }
@@ -260,10 +258,14 @@ public class Enemy implements Fighter, Observable {
         return strength;
     }
 
+    /**
+     * Противник получает урон, если противик умирает, он сообщает об этом GameSession используя шаблон програмирования
+     * Наблюдатель, для дальнейшей отработки события.
+     * @param damage изначальный урон
+     */
     @Override
     public void takeDamage(int damage) {
         health = health - damage;
-        game.debug = "Health " + health;
         if (isDead()) {
             notifyObserversDead();
         }
@@ -280,7 +282,7 @@ public class Enemy implements Fighter, Observable {
     }
 
     @Override
-    public void applyNegativeEffect(int effect){} // НЕОБХОДИМ????????????????????????????
+    public void applyNegativeEffect(int effect){}
 
     @Override
     public boolean isDead() {
@@ -295,27 +297,20 @@ public class Enemy implements Fighter, Observable {
         return position;
     }
 
+    /**
+     * Метод меняет координаты противника и сообщает об этом GameSession используя шаблон програмирования
+     *      * Наблюдатель, для дальнейшей отработки события.
+     * @param position координаты новой позиции противника
+     */
     public void setPosition(Coordinate position) {
         Coordinate curr = this.position;
         this.position = position;
         notifyObserversCoordinate(curr);
     }
 
-    /**
-     * DEBUG
-     */
-    public void setGame(GameSession game) {
-        this.game = game;
-    }
-
     @Override
     public void registerObserver(Observer o) {
         this.observer = o;
-    }
-
-    @Override
-    public void removeObserver(Observer o) {
-
     }
 
     @Override
@@ -326,5 +321,40 @@ public class Enemy implements Fighter, Observable {
     @Override
     public void notifyObserversDead() {
         observer.updateDead(this);
+    }
+
+    @Override
+    public void notifyObserversItem(Item item, int action){}
+
+    public int getMaxHealth() {
+        return maxHealth;
+    }
+
+    public int getHealth() {
+        return health;
+    }
+
+    public int getStrength() {
+        return strength;
+    }
+
+    public int getAgility() {
+        return agility;
+    }
+
+    public void setMaxHealth(int maxHealth) {
+        this.maxHealth = maxHealth;
+    }
+
+    public void setHealth(int health) {
+        this.health = health;
+    }
+
+    public void setAgility(int agility) {
+        this.agility = agility;
+    }
+
+    public void setStrength(int strength) {
+        this.strength = strength;
     }
 }

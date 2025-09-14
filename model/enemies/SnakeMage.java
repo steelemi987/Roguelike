@@ -1,10 +1,9 @@
 package model.enemies;
 
-import model.Coordinate;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import model.level.Coordinate;
 import static model.Support.*;
 
 public class SnakeMage extends Enemy {
@@ -16,9 +15,20 @@ public class SnakeMage extends Enemy {
     public SnakeMage(Coordinate position, int currentLevel) {
         super(position);
         this.type = SNAKE_MAGE;
-        this.health = 10 + currentLevel;
+        this.maxHealth = 10 + currentLevel;
+        this.health = maxHealth;
         this.agility = 25 + currentLevel;
         this.strength = 2 + currentLevel;
+        this.hostility = 5;
+    }
+
+    public SnakeMage(Coordinate position, int maxHealth, int health, int agility, int strength) {
+        super(position);
+        this.type = SNAKE_MAGE;
+        this.maxHealth = maxHealth;
+        this.health = health;
+        this.agility = agility;
+        this.strength = strength;
         this.hostility = 5;
     }
 
@@ -28,7 +38,7 @@ public class SnakeMage extends Enemy {
      * @return true - если персонаж находится на соседней клетке, false - если нет.
      */
     @Override
-    public boolean canFight(Coordinate characterPosition) {
+    protected boolean canFight(Coordinate characterPosition) {
         ArrayList<Coordinate> hitRange = new ArrayList<>();
         int y = position.getY() - 1;
         int x = position.getX() - 1;
@@ -45,7 +55,7 @@ public class SnakeMage extends Enemy {
      * @return список направлений.
      */
     @Override
-    public ArrayList<Integer> getDirectionList() {
+    protected ArrayList<Integer> getDirectionList() {
         return new ArrayList<>(Arrays.asList(LEFT_UP, RIGHT_UP, LEFT_DOWN, RIGHT_DOWN));
     }
 
@@ -55,7 +65,7 @@ public class SnakeMage extends Enemy {
      * @return координаты точки
      */
     @Override
-    public Coordinate getCoordinateWithShift(int direction) { // Coordinate src,
+    protected Coordinate getCoordinateWithShift(int direction) {
         Coordinate next = new Coordinate();
         switch (direction) {
             case LEFT_UP : next.setCoordinate(position.getX() - 1, position.getY() - 1);
@@ -77,7 +87,7 @@ public class SnakeMage extends Enemy {
     @Override
     public int getAttackEffect() {
         int effect = Effect.NO_EFFECT.ordinal();
-        if (randInDiaposone(0, 3) == 0) {
+        if (randInDiapason(0, 3) == 0) {
             effect = Effect.SLEEP.ordinal();
         }
         return effect;

@@ -1,4 +1,4 @@
-package model;
+package model.level;
 
 public class Coordinate {
     private int x;
@@ -53,11 +53,14 @@ public class Coordinate {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Coordinate)) return false;
-        Coordinate coordinate = (Coordinate) o;
+        if (!(o instanceof Coordinate coordinate)) return false;
         return x == coordinate.x && y == coordinate.y;
     }
 
+    /**
+     * Метод нужен для использования класса в составе сета.
+     * @return хэш код
+     */
     @Override
     public int hashCode() {
         int result = Integer.hashCode(x);

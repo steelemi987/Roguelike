@@ -1,13 +1,13 @@
-package model;
+package model.level;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * По сути класс хранит координаты пикселей, которые являются корридором
+ * По сути класс хранит координаты пикселей, которые являются коридором
  */
 public class Corridor {
-    private List<Coordinate> points;
+    private final List<Coordinate> points;
 
     /**
      * Конструктор
